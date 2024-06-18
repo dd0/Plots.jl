@@ -160,10 +160,8 @@ end
     @test pl[1][:xaxis][:ticks] == [1.25, 1.5, 1.75]
     pl = plot(1:2, xlabelfontsize = 4)
     @test pl[1][:xaxis][:guidefontsize] == 4
-    pl = plot(1:2, xgα = 0.07)
-    @test pl[1][:xaxis][:gridalpha] ≈ 0.07
     pl = plot(1:2, xgridls = :dashdot)
-    @test pl[1][:xaxis][:gridstyle] === :dashdot
+    @test pl[1][:xaxis][:gridstyle] ≡ :dashdot
     pl = plot(1:2, xgridcolor = :red)
     @test pl[1][:xaxis][:foreground_color_grid] === RGBA{Float64}(1.0, 0.0, 0.0, 1.0)
     pl = plot(1:2, xminorgridcolor = :red)
@@ -189,20 +187,42 @@ end
     @test compare(pl, :ticks, [1.25, 1.5, 1.75], ==)
     pl = plot(1:2, labelfontsize = 4)
     @test compare(pl, :guidefontsize, 4, ==)
-    pl = plot(1:2, gα = 0.07)
-    @test compare(pl, :gridalpha, 0.07, ≈)
     pl = plot(1:2, gridls = :dashdot)
     @test compare(pl, :gridstyle, :dashdot, ===)
-    pl = plot(1:2, gridcolor = :red)
-    @test compare(pl, :foreground_color_grid, RGBA{Float64}(1.0, 0.0, 0.0, 1.0), ===)
-    pl = plot(1:2, minorgridcolor = :red)
-    @test compare(pl, :foreground_color_minor_grid, RGBA{Float64}(1.0, 0.0, 0.0, 1.0), ===)
     pl = plot(1:2, grid_lw = 0.01)
     @test compare(pl, :gridlinewidth, 0.01, ≈)
     pl = plot(1:2, minorgrid_lw = 0.01)
     @test compare(pl, :minorgridlinewidth, 0.01, ≈)
     pl = plot(1:2, tickor = :out)
     @test compare(pl, :tick_direction, :out, ===)
+end
+
+@testset "Gridline color handling" begin
+    compare(pl::Plot, s::Symbol, val, op) =
+        op(pl[1][:xaxis][s], val) && op(pl[1][:yaxis][s], val) && op(pl[1][:zaxis][s], val)
+    # Aliases and basic flattening
+    pl = plot(1:2, gα = 0.07)
+    @test compare(pl, :gridalpha, 1.0, ≈)
+    @test compare(pl, :foreground_color_grid, RGBA(1-0.07, 1-0.07, 1-0.07, 1.0), ≈)
+    pl = plot(1:2, gridcolor = :red, gridalpha = 1.0)
+    @test compare(pl, :foreground_color_grid, RGBA(1.0, 0.0, 0.0, 1.0), ===)
+    pl = plot(1:2, minorgridcolor = :red, minorgridalpha = 1.0)
+    @test compare(pl, :foreground_color_minor_grid, RGBA(1.0, 0.0, 0.0, 1.0), ===)
+    # Axis-specific
+    pl = plot(1:2, xgα = 0.07)
+    @test pl[1][:xaxis][:gridalpha] ≈ 1.0
+    @test pl[1][:xaxis][:foreground_color_grid] ≈ RGBA(1-0.07, 1-0.07, 1-0.07, 1.0)
+    pl = plot(1:2, xgridcolor = :red, gridalpha = 1.0)
+    @test pl[1][:xaxis][:foreground_color_grid] ≡ RGBA(1.0, 0.0, 0.0, 1.0)
+    pl = plot(1:2, xminorgridcolor = :red, minorgridalpha = 1.0)
+    @test pl[1][:xaxis][:foreground_color_minor_grid] ≡ RGBA(1.0, 0.0, 0.0, 1.0)
+    # Blending
+    pl = plot(1:2, foreground_color_grid = RGB(1.0, 0.5, 0), background_color = RGB(0.0, 0.0, 0.0),  gridalpha = 0.2)
+    @test compare(pl, :gridalpha, 1.0, ≈)
+    @test compare(pl, :foreground_color_grid, RGBA{Float64}(0.2, 0.1, 0.0, 1.0), ≈)
+    pl = plot(1:2, foreground_color_grid = RGB(1.0, 0.5, 0), background_color = RGBA(0.0, 0.0, 0.0, 0.0),  gridalpha = 0.2)
+    @test compare(pl, :gridalpha, 0.2, ≈)
+    @test compare(pl, :foreground_color_grid, RGBA{Float64}(1.0, 0.5, 0, 1.0), ≈)
 end
 
 @testset "scale_lims!" begin
