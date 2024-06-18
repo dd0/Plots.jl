@@ -144,7 +144,43 @@ RecipesPipeline.type_alias(::Plot, st) = get(Commons._typeAliases, st, st)
 function RecipesPipeline.plot_setup!(plt::Plot, plotattributes, kw_list)
     _plot_setup(plt, plotattributes, kw_list)
     _subplot_setup(plt, plotattributes, kw_list)
+    flatten_gridline_transparency!(plt)
     nothing
+end
+
+function blend(bg, fg, α)
+    # From ISO 32000:2008 PDF specification, Section 11, using normal blending mode
+    αb = Colors.alpha(bg)
+    αf = Colors.alpha(fg) * α
+    αr = αb + αf - αb*αf
+    if iszero(αr)
+        Colors.RGBA(0, 0, 0, 0)
+    else
+        res = (1-αf/αr) * bg + αf/αr * fg
+        Colors.RGB(res.r, res.g, res.b), αr
+    end
+end
+
+function flatten_gridline_transparency!(plt)
+    for (idx, sp) ∈ enumerate(plt.subplots)
+        attr = KW()
+        for letter ∈ (:x, :y, :z)
+            ax = sp[get_attr_symbol(letter, :axis)]
+            bg = plt[:background_color]
+            fg = ax[:foreground_color_grid]
+            α = ax[:gridalpha]
+            fgm = ax[:foreground_color_minor_grid]
+            αm = ax[:minorgridalpha]
+            newfg, newα = blend(bg, fg, α)
+            newfgm, newαm = blend(bg, fgm, αm)
+
+            attr[get_attr_symbol(letter, :foreground_color_grid)] = newfg
+            attr[get_attr_symbol(letter, :gridalpha)] = newα
+            attr[get_attr_symbol(letter, :foreground_color_minor_grid)] = newfgm
+            attr[get_attr_symbol(letter, :minorgridalpha)] = newαm
+        end
+        Plots._update_subplot_attrs(plt, sp, attr, idx, false)
+    end
 end
 
 function RecipesPipeline.process_sliced_series_attributes!(::Plot, kw_list)
