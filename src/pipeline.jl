@@ -166,7 +166,6 @@ end
 
 function flatten_gridline_transparency!(plt)
     for (idx, sp) ∈ enumerate(plt.subplots)
-        attr = KW()
         for letter ∈ (:x, :y, :z)
             ax = sp[get_attr_symbol(letter, :axis)]
             bg = plt[:background_color]
@@ -174,15 +173,15 @@ function flatten_gridline_transparency!(plt)
             α = ax[:gridalpha]
             fgm = ax[:foreground_color_minor_grid]
             αm = ax[:minorgridalpha]
+
             newfg, newα = blend(bg, fg, α)
             newfgm, newαm = blend(bg, fgm, αm)
 
-            attr[get_attr_symbol(letter, :foreground_color_grid)] = newfg
-            attr[get_attr_symbol(letter, :gridalpha)] = newα
-            attr[get_attr_symbol(letter, :foreground_color_minor_grid)] = newfgm
-            attr[get_attr_symbol(letter, :minorgridalpha)] = newαm
+            ax[:foreground_color_grid] = newfg
+            ax[:gridalph] = newα
+            ax[:foreground_color_minor_grid] = newfgm
+            ax[:minorgridalpha] = newαm
         end
-        Plots._update_subplot_attrs(plt, sp, attr, idx, false)
     end
 end
 
